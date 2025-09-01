@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>سائنٹیفک کیلکولیٹر — ویب ایپ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;         /* slate-900 */
+      --panel: #111827;      /* gray-900 */
+      --panel-2: #1f2937;    /* gray-800 */
+      --accent: #22d3ee;     /* cyan-400 */
+      --accent-2: #2dd4bf;   /* teal-400 */
+      --text: #e5e7eb;       /* gray-200 */
+      --muted: #9ca3af;      /* gray-400 */
+      --danger: #f43f5e;     /* rose-500 */
+      --ok: #22c55e;         /* green-500 */
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: radial-gradient(1200px 700px at 80% -10%, rgba(45,212,191,.15), transparent 60%),
+                              radial-gradient(1000px 600px at 10% 110%, rgba(34,211,238,.12), transparent 60%),
+                              var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Noto Nastaliq Urdu", Arial, sans-serif;
+      display: grid; place-items: center; padding: 24px;
+    }
+    .app {
+      width: min(900px, 96vw);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 18px; background: rgba(17,24,39,.7); backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    header h1 { margin: 0; font-size: clamp(18px, 2.2vw, 24px); font-weight: 700; letter-spacing: .3px; }
+    header .meta { font-size: 12px; color: var(--muted); }
+
+    .display {
+      background: linear-gradient(180deg, rgba(2,6,23,.6), rgba(2,6,23,.2));
+      padding: 18px; border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .screen {
+      border-radius: 14px; background: #020617; padding: 16px; min-height: 96px;
+      display: grid; gap: 6px; border: 1px solid rgba(255,255,255,.06);
+    }
+    .history { color: var(--muted); text-align: left; direction: ltr; word-break: break-all; min-height: 20px; }
+    .current {
+      font-size: clamp(24px, 4.6vw, 42px); font-weight: 700; text-align: left; direction: ltr; word-break: break-all;
+    }
+
+    .toolbar {
+      display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 18px; background: rgba(2,6,23,.35);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .chip { border: 1px solid rgba(255,255,255,.12); padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,.04); cursor: pointer; user-select: none; }
+    .chip.active { border-color: var(--accent); color: var(--accent); }
+
+    .keys {
+      padding: 16px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; background: rgba(2,6,23,.25);
+    }
+    button.key {
+      font-size: clamp(14px, 2.6vw, 18px); font-weight: 600; padding: 14px 10px; border-radius: 14px;
+      background: var(--panel-2); color: var(--text); border: 1px solid rgba(255,255,255,.08); cursor: pointer;
+      box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 8px 16px rgba(0,0,0,.25);
+      transition: transform .04s ease, background .2s ease, border-color .2s ease;
+    }
+    button.key:hover { background: #243042; }
+    button.key:active { transform: translateY(1px); }
+    button.ac { background: linear-gradient(180deg, #2b1520, #1f0d17); border-color: rgba(244,63,94,.5); }
+    button.eq { background: linear-gradient(180deg, #0d2b2b, #0a1f1f); border-color: rgba(45,212,191,.45); }
+    button.primary { background: linear-gradient(180deg, #0f2536, #0b1a26); border-color: rgba(34,211,238,.45); }
+    button.ok { background: linear-gradient(180deg, #0f2a16, #0b1f10); border-color: rgba(34,197,94,.45); }
+
+    footer { padding: 10px 16px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+    .note { opacity: .9; }
+
+    @media (max-width: 560px) {
+      .keys { grid-template-columns: repeat(4, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Scientific Calculator">
+    <header>
+      <h1>سائنٹیفک کیلکولیٹر</h1>
+      <div class="meta">Web • RTL/Urdu Friendly • Keyboard Enabled</div>
+    </header>
+
+    <section class="display">
+      <div class="screen" aria-live="polite">
+        <div class="history" id="history"></div>
+        <div class="current" id="current">0</div>
+      </div>
+    </section>
+
+    <section class="toolbar">
+      <div class="chip" id="modeChip" title="ڈگری/ریڈین">DEG</div>
+      <div class="chip" id="memChip" title="میموری ویلیو دکھائیں">M: 0</div>
+      <div class="chip" id="themeChip" title="تھیم تبدیل کریں">Theme</div>
+    </section>
+
+    <section class="keys" id="keys">
+      <!-- Row 1: Memory + controls -->
+      <button class="key ac" data-act="clear">AC</button>
+      <button class="key" data-act="del">DEL</button>
+      <button class="key" data-insert="(">(</button>
+      <button class="key" data-insert=")">)</button>
+      <button class="key" data-fn="percent">%</button>
+      <button class="key" data-insert=",">,</button>
+
+      <!-- Row 2: functions -->
+      <button class="key primary" data-fn="sin">sin</button>
+      <button class="key primary" data-fn="cos">cos</button>
+      <button class="key primary" data-fn="tan">tan</button>
+      <button class="key primary" data-fn="ln">ln</button>
+      <button class="key primary" data-fn="log">log</button>
+      <button class="key primary" data-fn="sqrt">√</button>
+
+      <!-- Row 3: constants + powers -->
+      <button class="key" data-insert="π">π</button>
+      <button class="key" data-insert="e">e</button>
+      <button class="key" data-fn="pow2">x²</button>
+      <button class="key" data-fn="powY">x^y</button>
+      <button class="key" data-fn="inv">x⁻¹</button>
+      <button class="key" data-fn="abs">|x|</button>
+
+      <!-- Row 4: numbers/operators -->
+      <button class="key" data-insert="7">7</button>
+      <button class="key" data-insert="8">8</button>
+      <button class="key" data-insert="9">9</button>
+      <button class="key" data-insert="/">÷</button>
+      <button class="key" data-insert="*">×</button>
+      <button class="key" data-fn="fact">n!</button>
+
+      <button class="key" data-insert="4">4</button>
+      <button class="key" data-insert="5">5</button>
+      <button class="key" data-insert="6">6</button>
+      <button class="key" data-insert="-">−</button>
+      <button class="key" data-insert="+">+</button>
+      <button class="key" data-fn="rand">rand</button>
+
+      <button class="key" data-insert="1">1</button>
+      <button class="key" data-insert="2">2</button>
+      <button class="key" data-insert="3">3</button>
+      <button class="key" data-fn="sign">±</button>
+      <button class="key" data-insert=".">.</button>
+      <button class="key ok" data-act="equals">=</button>
+
+      <button class="key" data-fn="MC">MC</button>
+      <button class="key" data-fn="MR">MR</button>
+      <button class="key" data-fn="Mplus">M+</button>
+      <button class="key" data-fn="Mminus">M-</button>
+      <button class="key" data-fn="asin">asin</button>
+      <button class="key" data-fn="acos">acos</button>
+      <button class="key" data-fn="atan">atan</button>
+
+    </section>
+    <footer>
+      <div class="note">کی بورڈ: Enter = =، Backspace = DEL، Esc = AC</div>
+      <div>© آپ کی ویب سائٹ</div>
+    </footer>
+  </div>
+
+  <script>
+    const historyEl = document.getElementById('history');
+    const currentEl = document.getElementById('current');
+    const keysEl = document.getElementById('keys');
+    const modeChip = document.getElementById('modeChip');
+    const memChip = document.getElementById('memChip');
+    const themeChip = document.getElementById('themeChip');
+
+    let expr = '';
+    let memory = 0;
+    let isDeg = true;
+
+    const setExpr = (v) => { expr = v; currentEl.textContent = expr || '0'; };
+    const append = (t) => setExpr(expr + t);
+
+    function polarizeTheme() {
+      document.body.classList.toggle('light');
+      const light = document.body.classList.contains('light');
+      if (light) {
+        document.documentElement.style.setProperty('--bg', '#edf2f7');
+        document.documentElement.style.setProperty('--panel', '#ffffff');
+        document.documentElement.style.setProperty('--panel-2', '#f3f4f6');
+        document.documentElement.style.setProperty('--text', '#0b1220');
+        document.documentElement.style.setProperty('--muted', '#4b5563');
+      } else {
+        document.documentElement.style.setProperty('--bg', '#0f172a');
+        document.documentElement.style.setProperty('--panel', '#111827');
+        document.documentElement.style.setProperty('--panel-2', '#1f2937');
+        document.documentElement.style.setProperty('--text', '#e5e7eb');
+        document.documentElement.style.setProperty('--muted', '#9ca3af');
+      }
+    }
+
+    themeChip.addEventListener('click', polarizeTheme);
+
+    modeChip.addEventListener('click', () => {
+      isDeg = !isDeg;
+      modeChip.textContent = isDeg ? 'DEG' : 'RAD';
+      modeChip.classList.toggle('active', !isDeg);
+    });
+
+    const sanitize = (s) => s.replace(/[A-Za-z_$][A-Za-z0-9_$]*\s*=|new\s+|this|window|document|Function|=>/g, '');
+
+    function toJS(source) {
+      let s = source;
+      s = s.replace(/×/g, '*').replace(/÷/g, '/');
+      s = s.replace(/π|\bpi\b/gi, 'PI');
+      s = s.replace(/\be\b/g, 'E');
+      s = s.replace(/\^/g, '**');
+      // factorial: turn 5! or (..)! into fact(5) recursively
+      let prev;
+      do {
+        prev = s;
+        s = s.replace(/(\d+(?:\.\d+)?|\([^()]*\))!/g, 'fact($1)');
+      } while (s !== prev);
+      // functions
+      s = s.replace(/\b√\(/g, 'sqrt(');
+      s = s.replace(/\bln\(/g, 'ln(');
+      s = s.replace(/\blog\(/g, 'log10(');
+      // trig direct
+      s = s.replace(/\bsin\(/g, 'Sin(');
+      s = s.replace(/\bcos\(/g, 'Cos(');
+      s = s.replace(/\btan\(/g, 'Tan(');
+      // inverse trig
+      s = s.replace(/\basin\(/g, 'aSin(');
+      s = s.replace(/\bacos\(/g, 'aCos(');
+      s = s.replace(/\batan\(/g, 'aTan(');
+      return sanitize(s);
+    }
+
+    // math helpers with DEG/RAD handling
+    function toRad(x){ return x * Math.PI / 180; }
+    function toDeg(x){ return x * 180 / Math.PI; }
+
+    function Sin(x){ return Math.sin(isDeg ? toRad(x) : x); }
+    function Cos(x){ return Math.cos(isDeg ? toRad(x) : x); }
+    function Tan(x){ return Math.tan(isDeg ? toRad(x) : x); }
+    function aSin(x){ const v = Math.asin(x); return isDeg ? toDeg(v) : v; }
+    function aCos(x){ const v = Math.acos(x); return isDeg ? toDeg(v) : v; }
+    function aTan(x){ const v = Math.atan(x); return isDeg ? toDeg(v) : v; }
+
+    function ln(x){ return Math.log(x); }
+    function log10(x){ return Math.log10 ? Math.log10(x) : Math.log(x)/Math.LN10; }
+    function sqrt(x){ return Math.sqrt(x); }
+    function abs(x){ return Math.abs(x); }
+    function pow(x,y){ return Math.pow(x,y); }
+    function rand(){ return Math.random(); }
+
+    function fact(n){
+      n = Number(n);
+      if (!Number.isFinite(n) || n < 0) throw new Error('Invalid factorial');
+      if (n % 1 !== 0) throw new Error('Factorial only for integers');
+      if (n > 170) throw new Error('Too large'); // Infinity beyond ~170
+      let r = 1; for (let i=2;i<=n;i++) r*=i; return r;
+    }
+
+    const scope = { PI: Math.PI, E: Math.E, Sin, Cos, Tan, aSin, aCos, aTan, ln, log10, sqrt, abs, pow, rand, fact };
+
+    function evaluate(source){
+      const js = toJS(source);
+      if (/[^0-9+\-*/%.(),!\sA-Za-z_\d\[\]{}^|&<>=?]/.test(js)) throw new Error('Invalid characters');
+      const fn = Function(...Object.keys(scope), 'return ('+js+')');
+      return fn(...Object.values(scope));
+    }
+
+    function tryEval() {
+      if (!expr) return;
+      try {
+        const result = evaluate(expr);
+        historyEl.textContent = expr + ' =';
+        setExpr(String(result));
+      } catch (e) {
+        historyEl.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    function handleKey(action, value){
+      switch(action){
+        case 'clear': historyEl.textContent=''; setExpr(''); break;
+        case 'del': setExpr(expr.slice(0,-1)); break;
+        case 'equals': tryEval(); break;
+        default: if (value!=null) append(value); break;
+      }
+    }
+
+    // Button events
+    keysEl.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const ins = btn.getAttribute('data-insert');
+      const act = btn.getAttribute('data-act');
+      const fn = btn.getAttribute('data-fn');
+      if (act) return handleKey(act);
+      if (ins != null) return append(ins);
+      if (fn) return handleFn(fn);
+    });
+
+    function handleFn(name){
+      const map = {
+        sin: 'sin(', cos: 'cos(', tan: 'tan(', ln: 'ln(', log: 'log(', sqrt: '√(',
+        pow2: '^2', powY: '^', inv: '^-1', abs: 'abs(', fact: '!', rand: 'rand()',
+        sign: '±', MC:'MC', MR:'MR', Mplus:'M+', Mminus:'M-', asin:'asin(', acos:'acos(', atan:'atan('
+      };
+      const token = map[name];
+      if (!token) return;
+      if (token === '±') {
+        if (!expr) return;
+        // wrap last number in (-x)
+        const m = expr.match(/(\d+(?:\.\d+)?)(?!.*\d)/);
+        if (m) setExpr(expr.slice(0,m.index) + '(' + -Number(m[1]) + ')' );
+        return;
+      }
+      if (token === 'MC'){ memory = 0; memChip.textContent = 'M: 0'; return; }
+      if (token === 'MR'){ append(String(memory)); return; }
+      if (token === 'M+'){
+        try { memory += Number(evaluate(expr||'0')) || 0; memChip.textContent = 'M: ' + (+memory.toFixed(10)); } catch {}
+        return;
+      }
+      if (token === 'M-'){
+        try { memory -= Number(evaluate(expr||'0')) || 0; memChip.textContent = 'M: ' + (+memory.toFixed(10)); } catch {}
+        return;
+      }
+      if (token === '^') { append('^'); return; }
+      if (token === '^2') { append('^2'); return; }
+      if (token === '^-1') { append('^-1'); return; }
+      if (token === '!') { append('!'); return; }
+      append(token);
+    }
+
+    function percentCurrent(){
+      // convert the last number into /100
+      const m = expr.match(/(.*?)(\d+(?:\.\d+)?)$/);
+      if (m) setExpr(m[1] + '(' + m[2] + '/100)');
+    }
+
+    document.querySelector('[data-fn="percent"]').addEventListener('click', percentCurrent);
+
+    // Keyboard support
+    document.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); tryEval(); return; }
+      if (e.key === 'Backspace') { e.preventDefault(); handleKey('del'); return; }
+      if (e.key === 'Escape') { e.preventDefault(); handleKey('clear'); return; }
+      const allowed = '0123456789+-*/().,^%';
+      if (allowed.includes(e.key)) { append(e.key); return; }
+      if (e.key.toLowerCase() === 'p') { append('π'); return; }
+    });
+
+    // Demo: start with 0
+    setExpr('');
+  </script>
+</body>
+</html>
